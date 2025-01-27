@@ -46,11 +46,25 @@ if (size(mode) == [length(x)-1,length(y)-1])
     y = (y(1:end-1) + y(2:end))/2;
 end
 
-%if (nargin < 4) || isempty(dB)
- % dB = (0:-3:-45);
-%end
+% if (nargin < 4) || isempty(dB)
+%  dB = (0:-3:-45);
+% end
 
 % Compute and plot contours
+% c = contourc(x,y,20*log10(abs(transpose(mode))),dB);
+% cmap = colormap;
+% ii = 1;
+% cla;
+% while (ii < length(c)),
+%   level = c(1,ii);
+%   n = c(2,ii);
+%   jj = 1+round((length(cmap)-1)*(level - min(dB))/(max(dB)-min(dB)));
+%   color = cmap(jj,:);
+%   line(c(1,ii+1:ii+n),c(2,ii+1:ii+n),'Color',color);
+%   ii = ii+n+1;
+% end
+
+% The new code for the surf function
 surf(x, y, real(mode.'));
 colormap(jet);
 shading interp;

@@ -14,50 +14,55 @@ h3 = 0.5;           % Upper cladding
 
 % Horizontal dimensions:
 rh = 1.1;           % Ridge height
-% rw = 1.0;           % Ridge half-width
-side = 1.5;         % Space on side
+rw_initial = 0.325; % Initial Ridge half-width
+rw_final = 1.0;     % Final Rige final-width
+side = 1.5;         % Space on side\
 
 % Grid size:
 dx = 0.0125;        % grid size (horizontal)
 dy = 0.0125;        % grid size (vertical)
 
-lambda = 1.55;      % vacuum wavelength
-nmodes = 1;         % number of modes to compute
+% Make the mesh 8 times less dense
+dx_coarse = dx * 8;
+dy_coarse = dy * 8;
 
-% Ridge half-width from 0.325 to 1.0 
-ridge_widths = linspace(0.325, 1.0, 10);
-neff_values = zeros(size(ridge_widths));
+lambda = 1.55;      % vacuum wavelength
+nmodes = 10;         % number of modes to compute
+
+% Ridge half-width sweep 
+rw_values = linspace(rw_initial, rw_final, 10);
+neff_results = zeros(10, nmodes); % Storing the effective indices for all steps
+
+figure; 
+for i = 1:length(rw_values)
+    rw = rw_values(i); % Current ridge half-width
+
+    % Generate waveguide mesh for the current ridge width(s)
+    [x, y, xc, yc, nx, ny, eps, edges] = waveguidemesh([n1, n2, n3], ...
+                                                        [h1, h2, h3], ...
+                                                        rh, rw, side, ...
+                                                        dx_coarse, dy_coarse);
 
 % Considering the TE mode:
-for i = 1:length(ridge_widths)
-    rw = ridge_widths(i);
-
-    [x,y,xc,yc,nx,ny,eps,edges] = waveguidemesh([n1,n2,n3], [h1,h2,h3], rh, rw, side, dx, dy);
-
-    [Hx,Hy,neff] = wgmodes(lambda,n2,nmodes,dx,dy,eps,'000A');
-    neff_values(i) = neff;
-
-    figure(i);
-    subplot(121);
-    contourmode(x,y,Hx(:,:,1));
-    title(sprintf('Hx(TE mode, rw=%.3f)', rw));
-    xlabel('x'); ylabel('y');
-    for v = edges, line(v{:}); end
+ [Hx, Hy, neff] = wgmodes(lambda, n2, nmodes, dx_coarse, dy_coarse, eps, '000A');
+    neff_results(i, :) = neff; % Store neff for this ridge width
     
-    subplot(122);
-    contourmode(x,y,Hy(:,:,1));
-    title(sprintf('Hy(TE mode, rw=%.3f)', rw));
+    % Plot modes for the first mode (example visualization)
+    subplot(2, 5, i);
+    contourmode(x, y, Hx(:, :, 1)); % Plot Hx of the first TE mode
+    title(['rw = ' num2str(rw)]);
     xlabel('x'); ylabel('y');
     for v = edges, line(v{:}); end
 end
 
-% Plot neff as a function of ridge width 
+% Plot effective indices (neff) vs ridge half-width
 figure;
-plot(ridge_widths,neff_values,'-o','LineWidth', 2);
+plot(rw_values, neff_results(:, 1), '-o');
+title('Effective Index (neff) vs Ridge Half-Width');
 xlabel('Ridge Half-Width (rw)');
-ylabel('Effective Index (neff');
-title('Effective Index vs Ridge Width');
-grid on; 
+ylabel('Effective Index (neff)');
+grid on;
+
 
 
 

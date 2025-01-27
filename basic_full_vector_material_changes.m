@@ -4,7 +4,8 @@
 
 % Refractive indices:
 n1 = 3.34;          % Lower cladding
-% n2 = 3.44;          % Core
+n2_initial = 3.305; % Initial ridge index
+n2_final = 3.44;    % Final ridge index
 n3 = 1.00;          % Upper cladding (air)
 
 % Layer heights:
@@ -14,80 +15,54 @@ h3 = 0.5;           % Upper cladding
 
 % Horizontal dimensions:
 rh = 1.1;           % Ridge height
-rw = 1.0;           % Ridge half-width
+rw_initial = 0.325; % Initial Ridge half-width
+rw_final = 1.0;     % Final Ridge half-width
 side = 1.5;         % Space on side
 
 % Grid size:
 dx = 0.0125;        % grid size (horizontal)
 dy = 0.0125;        % grid size (vertical)
 
+% Make the mesh 8 times less dense:
+dx_coarse = dx * 8;
+dy_coarse = dy * 8;
+
 lambda = 1.55;      % vacuum wavelength
-nmodes = 1;         % number of modes to compute
+nmodes = 10;         % number of modes to compute
 
-% Ridge index sweep from 3.305 to 3.44 in 10 steps 
-ridge_indices = linspace(0.325, 3.44, 10);
-neff_values = zeros(size(ridge_indices)); % Stores the neff values
+% Ridge index sweep:
+n2_values = linspace(n2_initial, n2_final, 10);
+neff_results = zeros(10, nmodes); % Storing the effective indices for all steps
 
-for i = 1:length(ridge_indices)
-    n2 = ridge_indices(i); % Current ridge index
-   
-    % Generate the waveguide mesh
-     [x,y,xc,yc,nx,ny,eps,edges] = waveguidemesh([n1,n2,n3],[h1,h2,h3], ...
-                                             rh,rw,side,dx,dy); 
-
-    
-    % First consider the fundamental TE mode
-    [Hx,Hy,neff] = wgmodes(lambda,n2,nmodes,dx,dy,eps,'000A');
-    neff_values(i) = neff; % Stores the effective index
-    
-    % Plot the mode profiles for the current ridge index 
-    figure(i);
-    subplot(121);
-    contourmode(x,y,Hx(:,:,1));
-    title(sprintf('Hx(TE mode, n2=%.3f)', n2))
-    xlabel('x'); ylabel('y'); 
-    for v = edges, line(v{:}); end
-   
-    subplot(122);
-    contourmode(x,y,Hy(:,:,1));
-    title(sprintf('Hy(TE mode, n2=%.3f)', n2)); 
-    xlabel('x'); ylabel('y'); 
-    for v = edges, line(v{:}); end
-end 
-
-% Plot neff as a function of ridge index 
 figure;
-plot(ridge_indices,neff_values, '-o', 'LineWidth', 2);
+for i = 1:length(n2_values)
+    n2 = n2_values(i); % Current ridge index
+
+    % Generate waveguide mesh for the current ridge index
+    [x, y, xc, yc, nx, ny, eps, edges] = waveguidemesh([n1, n2, n3], ...
+                                                        [h1, h2, h3], ...
+                                                        rh, rw_initial, side, ...
+                                                        dx_coarse, dy_coarse);
+
+    % Compute TE modes:
+    [Hx, Hy, neff] = wgmodes(lambda, n2, nmodes, dx_coarse, dy_coarse, eps, '000A');
+    neff_results(i, :) = neff; % Store neff for this ridge index
+
+    % Plot modes for the first mode (example visualization)
+    subplot(2, 5, i);
+    contourmode(x, y, Hx(:, :, 1)); % Plot Hx of the first TE mode
+    title(['n2 = ' num2str(n2)]);
+    xlabel('x'); ylabel('y');
+    for v = edges, line(v{:}); end
+end
+
+% Plot effective indices (neff) vs ridge refractive index
+figure;
+plot(n2_values, neff_results(:, 1), '-o');
+title('Effective Index (neff) vs Ridge Refractive Index (n2)');
 xlabel('Ridge Index (n2)');
 ylabel('Effective Index (neff)');
-title('Effective Index vs Ridge Index');
 grid on;
 
-% ------ Removed code from the basic_fullvector_singlemode --------
-% Mesh 8 times less dense 
 
-% dx_coarse = 8 * dx;
-% dy_coarse = 8 * dy;
-% 
-% fprintf('\nCalculating with 8x coarser mesh:\n');
-% rw = 1.0; % Testing at the widest ridge width 
-% 
-% % Generating waveguide mesh
-% 
-% [x,y,xc,yc,nx,ny,eps,edges] = waveguidemesh([n1,n2,n3], [h1,h2,h3],rh,rw,side,dx_coarse,dy_coarse);
-% [Hx_coarse, Hy_coarse, neff_coarse] = wgmodes(lambda, n2, nmodes, dx_coarse, dy_coarse, eps, '000A');
-% 
-% fprintf('Coarse mesh: neff = %.6f\n', neff_coarse);
-% 
-% figure;
-% subplot(121);
-% contourmode(x, y, Hx_coarse(:,:,1));
-% title('Hx (TE mode, coarse mesh)');
-% xlabel('x'); ylabel('y');
-% for v = edges, line(v{:}); end
-% 
-% subplot(122);
-% contourmode(x, y, Hy_coarse(:,:,1));
-% title('Hy (TE mode, coarse mesh)');
-% xlabel('x'); ylabel('y');
-% for v = edges, line(v{:}); end
+
