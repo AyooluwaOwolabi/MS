@@ -1,68 +1,67 @@
 % This example shows how to calculate and plot both the
 % fundamental TE and TM eigenmodes of an example 3-layer ridge
-% waveguide using the full-vector eigenmode solver.  
-
+% waveguide using the full-vector eigenmode solver.
 % Refractive indices:
 n1 = 3.34;          % Lower cladding
-n2_initial = 3.305; % Initial ridge index
-n2_final = 3.44;    % Final ridge index
+n2 = 3.44;          % Core
 n3 = 1.00;          % Upper cladding (air)
-
 % Layer heights:
 h1 = 2.0;           % Lower cladding
 h2 = 1.3;           % Core thickness
 h3 = 0.5;           % Upper cladding
-
 % Horizontal dimensions:
 rh = 1.1;           % Ridge height
-rw_initial = 0.325; % Initial Ridge half-width
-rw_final = 1.0;     % Final Ridge half-width
+rw = 1.0;           % Ridge half-width
 side = 1.5;         % Space on side
-
 % Grid size:
 dx = 0.0125;        % grid size (horizontal)
 dy = 0.0125;        % grid size (vertical)
-
-% Make the mesh 8 times less dense:
-dx_coarse = dx * 8;
-dy_coarse = dy * 8;
-
 lambda = 1.55;      % vacuum wavelength
-nmodes = 10;         % number of modes to compute
+nmodes = 1;         % number of modes to compute
+% Initialize an array to store neff values for each ridge half-width
+neff_values = zeros(1,10);
 
-% Ridge index sweep:
-n2_values = linspace(n2_initial, n2_final, 10);
-neff_results = zeros(10, nmodes); % Storing the effective indices for all steps
-
-figure;
-for i = 1:length(n2_values)
-    n2 = n2_values(i); % Current ridge index
-
-    % Generate waveguide mesh for the current ridge index
-    [x, y, xc, yc, nx, ny, eps, edges] = waveguidemesh([n1, n2, n3], ...
-                                                        [h1, h2, h3], ...
-                                                        rh, rw_initial, side, ...
-                                                        dx_coarse, dy_coarse);
-
-    % Compute TE modes:
-    [Hx, Hy, neff] = wgmodes(lambda, n2, nmodes, dx_coarse, dy_coarse, eps, '000A');
-    neff_results(i, :) = neff; % Store neff for this ridge index
-
-    % Plot modes for the first mode (example visualization)
-    subplot(2, 5, i);
-    contourmode(x, y, Hx(:, :, 1)); % Plot Hx of the first TE mode
-    title(['n2 = ' num2str(n2)]);
-    xlabel('x'); ylabel('y');
+for j=1:10
+    n2 = 3.305 + (j-1) * (3.44 - 3.305) / 9; % Increment ridge width between 0.325 and 1.0
+    [x,y,xc,yc,nx,ny,eps,edges] = waveguidemesh([n1,n2,n3],[h1,h2,h3], ...
+        rh,rw,side,dx,dy);
+    % First consider the fundamental TE mode:
+    [Hx,Hy,neff(j)] = wgmodes(lambda,n2,nmodes,dx,dy,eps,'000A');
+    fprintf(1,'neff = %.6f\n',neff);
+    figure;
+    subplot(121);
+    surf(x, y, real(Hx.')); % Plot the real part of Hx
+    % shading interp; % Smooth color gradients
+    %contourmode(x,y,Hx);
+    shading interp
+    view(0,90)
+    title('Hx (TE mode) - Mode'); xlabel('x'); ylabel('y');
     for v = edges, line(v{:}); end
+    subplot(122);
+    % contourmode(x,y,Hy);
+    surf(x, y, real(Hy.')); % Plot the real part of Hx
+    shading interp
+    view(0,90)
+    title('Hy (TE mode)'); xlabel('x'); ylabel('y');
+    for v = edges, line(v{:}); end
+    % Next consider the fundamental TM mode
+    % (same calculation, but with opposite symmetry)
+    [Hx,Hy,neff] = wgmodes(lambda,n2,nmodes,dx,dy,eps,'000S');
+    fprintf(1,'neff = %.6f\n',neff);
+    
+        figure(2);
+        subplot(121);
+        % contourmode(x,y,Hx);
+        surf(x, y, real(Hx.')); % Plot the real part of Hx
+        % s
+        shading interp
+        view(0,90)
+        for v = edges, line(v{:}); end
+        subplot(122);
+        surf(x,y,real (Hy.'));
+        shading interp
+        view(0,90)
+        title('Hy (TM mode)'); xlabel('x'); ylabel('y');
+        for v = edges, line(v{:}); end
 end
-
-% Plot effective indices (neff) vs ridge refractive index
-figure;
-plot(n2_values, neff_results(:, 1), '-o');
-title('Effective Index (neff) vs Ridge Refractive Index (n2)');
-xlabel('Ridge Index (n2)');
-ylabel('Effective Index (neff)');
-grid on;
-
-
-
+    
